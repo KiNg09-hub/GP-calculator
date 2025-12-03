@@ -93,6 +93,23 @@
       if (mark >= 0) return { grade: "F", value: 9 };
       return { grade: "-", value: 0 };
     }
+    function preventDuplicateSubjects() {
+  const selects = document.querySelectorAll(".subjectSelect");
+  const chosen = [];
+
+  // collect selected subjects
+  selects.forEach(sel => {
+    if (sel.value) chosen.push(sel.value);
+  });
+
+  // disable used options
+  selects.forEach(sel => {
+    const options = sel.querySelectorAll("option");
+    options.forEach(opt => {
+      opt.disabled = chosen.includes(opt.value) && sel.value !== opt.value;
+    });
+  });
+    }
 
     function generateSubjects() {
       const total = parseInt(document.getElementById("totalSubjects").value);
@@ -102,15 +119,25 @@
       if (total <= 0) return;
 
       for (let i = 1; i <= total; i++) {
+        // Prevent duplicate subject selection
+if (i > 1) {
+  const selectedSubjects = [...document.querySelectorAll("[data-subject]")]
+    .map(sel => sel.value);
+
+    // Remove already-chosen subjects from dropdown
+   availableSubjects = subjectList.filter(sub => !selectedSubjects.includes(sub));
+   } else {
+   availableSubjects = [...subjectList]; // first dropdown = full list
+   }
         container.innerHTML += `
           <div class="bg-white border border-slate-300 p-4 rounded-xl shadow-sm mt-3">
 
             <label class="font-medium text-slate-700">Subjek ${i}</label>
 
-            <select class="w-full mt-2 p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-400" data-subject>
+            <select class="subjectSelect w-full mt-2 p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-400" onchange="preventDuplicateSubjects()" data-subject>
               ${subjectList.map(sub => `<option value="${sub}">${sub}</option>`).join("")}
             </select>
-
+          
             <input type="number" data-mark
                    placeholder="Markah (0 - 100)"
                    class="w-full mt-3 p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-400">
@@ -127,6 +154,8 @@
 
       let totalValue = 0;
       let resultText = "";
+      let totalMarks = 0;
+      let totalPossible = 0;
 
       subjects.forEach((subj, i) => {
         let m = marks[i];
@@ -134,15 +163,17 @@
 
         const data = getGradeData(m);
         totalValue += data.value;
+        totalMarks += mark;
+        totalPossible += subj*100;
 
-        resultText += `${subj}: ${data.grade} (GP ${data.value})<br>`;
+        resultText += `${subj}: ${data.grade}<br>`;
       });
 
       const gp = (totalValue / subjects.length).toFixed(2);
 
       document.getElementById("result").innerHTML =
         resultText + `<br><span class="text-green-600 font-bold">Gred Purata: ${gp}</span>`;
-
+        result += `<h3 class="mt-4 font-bold">Jumlah Markah: ${totalMarks} / ${totalPossible}</h3>`;
       document.getElementById("downloadBtn").classList.remove("hidden");
     }
 
@@ -167,3 +198,4 @@
 
 </body>
 </html>
+
