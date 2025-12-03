@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+DOCTYPE html>
 <html>
 <head>
   <title>SPM GP Calculator + PDF</title>
@@ -51,6 +51,11 @@
       "Kesusasteraan Tamil",
       "Seni Visual",
       "Pendidikan Jasmani & Kesihatan"
+      "Bahasa Tamil"
+      "Bahasa Cina"
+      "Bahasa Arab"
+      "Pendidikan Al-Quran dan Al-Sunnah"
+      "Pendidikan Syariah Islamiah"
     ];
 
     function generateSubjects() {
@@ -109,8 +114,8 @@
 
         totalValue += data.value;
 
-        output += `${subjects[i].value}: Markah ${mark} → Gred ${data.grade} (Nilai ${data.value})<br>`;
-        pdfText += `${subjects[i].value}: ${mark} → ${data.grade} (Nilai ${data.value})\n`;
+        output += `${subjects[i].value}: Markah ${mark} → Gred ${data.grade}<br>`;
+        pdfText += `${subjects[i].value}: ${mark} → ${data.grade}\n`;
       });
 
       let gp = (totalValue / totalSubjects).toFixed(2);
@@ -144,3 +149,4 @@
 
 </body>
 </html>
+
