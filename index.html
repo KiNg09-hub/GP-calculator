@@ -1,201 +1,209 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>SPM GP Calculator</title>
+  <title>SPM GP Calculator (Tailwind)</title>
 
-  <!-- TailwindCSS CDN -->
+  <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 </head>
-<body class="bg-slate-100">
 
-  <div class="max-w-2xl mx-auto mt-10 bg-white p-8 rounded-2xl shadow-lg border border-slate-200">
+<body class="bg-slate-100 p-6">
 
-    <h2 class="text-3xl font-bold text-indigo-600 mb-5 text-center">
-      Kalkulator Gred Purata (GP) – SPM
-    </h2>
+  <div class="max-w-2xl mx-auto bg-white shadow-xl rounded-2xl p-6">
 
-    <!-- SUBJECT COUNT INPUT -->
-    <label class="font-medium text-slate-700">Jumlah Subjek SPM Diambil:</label>
+    <h2 class="text-2xl font-bold text-indigo-600 mb-4">Kalkulator Gred Purata (GP) – SPM</h2>
+
+    <!-- INPUT TOTAL SUBJECTS -->
+    <label class="font-medium text-slate-700">Jumlah Subjek SPM Diambil :</label>
     <input type="number" id="totalSubjects" min="1"
-           class="w-full p-3 mt-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-400"
-           placeholder="Contoh: 9">
+      class="w-full p-3 mt-2 border rounded-lg focus:ring-2 focus:ring-indigo-400"
+      placeholder="Contoh: 9">
 
     <button onclick="generateSubjects()"
-            class="w-full mt-3 bg-indigo-500 hover:bg-indigo-600 text-white py-3 rounded-xl font-semibold">
+      class="w-full mt-3 bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700">
       Set
     </button>
 
-    <div id="subjectsContainer" class="mt-6"></div>
+    <!-- ERROR MESSAGE -->
+    <div id="errorBox" class="hidden mt-4 p-3 bg-red-100 text-red-700 font-semibold rounded-lg"></div>
 
-    <button id="calcBtn"
-            onclick="calculateGP()"
-            class="w-full mt-4 bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-semibold hidden">
+    <!-- SUBJECTS LOADED HERE -->
+    <div id="subjectsContainer" class="mt-4"></div>
+
+    <!-- CALCULATE BUTTON -->
+    <button id="calcBtn" onclick="calculateGP()" class="hidden w-full mt-4 bg-green-600 text-white p-3 rounded-lg hover:bg-green-700">
       Kira GP
     </button>
 
-    <button id="downloadBtn"
-            onclick="downloadPDF()"
-            class="w-full mt-3 bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-xl font-semibold hidden">
-      Muat Turun PDF
-    </button>
-
-    <h3 class="text-xl font-bold mt-6 text-slate-700">Keputusan:</h3>
-    <div id="result" class="text-lg mt-2 font-semibold text-indigo-700">-</div>
+    <!-- RESULT -->
+    <h3 class="text-xl font-bold mt-6 text-indigo-700">Keputusan:</h3>
+    <div id="result" class="mt-2 bg-slate-50 p-4 rounded-lg border">-</div>
 
   </div>
 
-  <script>
-    const subjectList = [
-      "Bahasa Melayu",
-      "Bahasa Inggeris",
-      "Matematik",
-      "Sains",
-      "Sejarah",
-      "Matematik Tambahan",
-      "Fizik",
-      "Kimia",
-      "Biologi",
-      "Pendidikan Islam",
-      "Pendidikan Moral",
-      "Ekonomi",
-      "Perakaunan",
-      "Perniagaan",
-      "Reka Bentuk & Teknologi (RBT)",
-      "Sains Komputer",
-      "Prinsip Perakaunan",
-      "Geografi",
-      "Kesusasteraan Melayu",
-      "Kesusasteraan Tamil",
-      "Seni Visual",
-      "Pendidikan Jasmani & Kesihatan",
-      "Bahasa Tamil",
-      "Bahasa Cina",
-      "Bahasa Arab",
-      "Pendidikan Al-Quran dan Al-Sunnah",
-      "Pendidikan Syariah Islamiah"
-    ];
+<script>
+  /* ---------------------------------------------------
+     ORIGINAL SUBJECT LIST (CLEANED & FIXED)
+  --------------------------------------------------- */
+  const spmSubjects = [
+    "Bahasa Melayu",
+    "Bahasa Inggeris",
+    "Matematik",
+    "Sains",
+    "Sejarah",
+    "Matematik Tambahan",
+    "Fizik",
+    "Kimia",
+    "Biologi",
+    "Pendidikan Islam",
+    "Pendidikan Moral",
+    "Ekonomi",
+    "Perakaunan",
+    "Perniagaan",
+    "Reka Bentuk & Teknologi (RBT)",
+    "Sains Komputer",
+    "Prinsip Perakaunan",
+    "Geografi",
+    "Kesusasteraan Melayu",
+    "Kesusasteraan Tamil",
+    "Seni Visual",
+    "Pendidikan Jasmani & Kesihatan",
+    "Bahasa Tamil",
+    "Bahasa Cina",
+    "Bahasa Arab",
+    "Pendidikan Al-Quran dan Al-Sunnah",
+    "Pendidikan Syariah Islamiah"
+  ];
 
-    function getGradeData(mark) {
-      if (mark >= 90) return { grade: "A+", value: 0 };
-      if (mark >= 80) return { grade: "A", value: 1 };
-      if (mark >= 70) return { grade: "A-", value: 2 };
-      if (mark >= 66) return { grade: "B+", value: 3 };
-      if (mark >= 60) return { grade: "B", value: 4 };
-      if (mark >= 55) return { grade: "C+", value: 5 };
-      if (mark >= 50) return { grade: "C", value: 6 };
-      if (mark >= 46) return { grade: "D", value: 7 };
-      if (mark >= 40) return { grade: "E", value: 8 };
-      if (mark >= 0) return { grade: "F", value: 9 };
-      return { grade: "-", value: 0 };
-    }
-    function preventDuplicateSubjects() {
-  const selects = document.querySelectorAll(".subjectSelect");
-  const chosen = [];
+  /* ---------------------------------------------------
+     GRADE FUNCTION (YOU PROVIDED)
+  --------------------------------------------------- */
+  function getGrade(mark) {
+    if (mark >= 90) return "A+";
+    if (mark >= 80) return "A";
+    if (mark >= 70) return "A-";
+    if (mark >= 66) return "B+";
+    if (mark >= 60) return "B";
+    if (mark >= 55) return "C+";
+    if (mark >= 50) return "C";
+    if (mark >= 46) return "D";
+    if (mark >= 40) return "E";
+    return "F";
+  }
 
-  // collect selected subjects
-  selects.forEach(sel => {
-    if (sel.value) chosen.push(sel.value);
-  });
+  /* ---------------------------------------------------
+     POINT SYSTEM (UNCHANGED — YOUR VERSION)
+  --------------------------------------------------- */
+  function getPoints(mark) {
+    if (mark >= 90) return 0;
+    if (mark >= 80) return 1;
+    if (mark >= 70) return 2;
+    if (mark >= 66) return 3;
+    if (mark >= 60) return 4;
+    if (mark >= 55) return 5;
+    if (mark >= 50) return 6;
+    if (mark >= 46) return 7;
+    if (mark >= 40) return 8;
+    return 9;
+  }
 
-  // disable used options
-  selects.forEach(sel => {
-    const options = sel.querySelectorAll("option");
-    options.forEach(opt => {
-      opt.disabled = chosen.includes(opt.value) && sel.value !== opt.value;
-    });
-  });
-    }
+  /* ---------------------------------------------------
+     GENERATE SUBJECT BOXES
+  --------------------------------------------------- */
+  function generateSubjects() {
+    const total = parseInt(document.getElementById("totalSubjects").value);
+    const container = document.getElementById("subjectsContainer");
+    const errorBox = document.getElementById("errorBox");
 
-    function generateSubjects() {
-      const total = parseInt(document.getElementById("totalSubjects").value);
-      const container = document.getElementById("subjectsContainer");
-      container.innerHTML = "";
+    container.innerHTML = "";
+    errorBox.classList.add("hidden");
 
-      if (total <= 0) return;
+    if (total <= 0) return;
 
-      for (let i = 1; i <= total; i++) {
-        // Prevent duplicate subject selection
-if (i > 1) {
-  const selectedSubjects = [...document.querySelectorAll("[data-subject]")]
-    .map(sel => sel.value);
+    for (let i = 1; i <= total; i++) {
+      container.innerHTML += `
+        <div class="bg-white border p-4 rounded-xl shadow-sm mb-3">
 
-    // Remove already-chosen subjects from dropdown
-   availableSubjects = subjectList.filter(sub => !selectedSubjects.includes(sub));
-   } else {
-   availableSubjects = [...subjectList]; // first dropdown = full list
-   }
-        container.innerHTML += `
-          <div class="bg-white border border-slate-300 p-4 rounded-xl shadow-sm mt-3">
+          <label class="font-medium text-slate-700">Subjek ${i}</label>
 
-            <label class="font-medium text-slate-700">Subjek ${i}</label>
+          <!-- SUBJECT DROPDOWN -->
+          <select class="w-full mt-2 p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-400" data-subject>
+            ${spmSubjects.map(sub => `<option value="${sub}">${sub}</option>`).join("")}
+          </select>
 
-            <select class="subjectSelect w-full mt-2 p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-400" onchange="preventDuplicateSubjects()" data-subject>
-              ${subjectList.map(sub => `<option value="${sub}">${sub}</option>`).join("")}
-            </select>
-          
-            <input type="number" data-mark
-                   placeholder="Markah (0 - 100)"
-                   class="w-full mt-3 p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-400">
-          </div>
-        `;
-      }
-
-      document.getElementById("calcBtn").classList.remove("hidden");
-    }
-
-    function calculateGP() {
-      const marks = Array.from(document.querySelectorAll("[data-mark]")).map(m => parseInt(m.value));
-      const subjects = Array.from(document.querySelectorAll("[data-subject]")).map(s => s.value);
-
-      let totalValue = 0;
-      let resultText = "";
-      let totalMarks = 0;
-      let totalPossible = 0;
-
-      subjects.forEach((subj, i) => {
-        let m = marks[i];
-        if (isNaN(m)) m = 0;
-
-        const data = getGradeData(m);
-        totalValue += data.value;
-        totalMarks += mark;
-        totalPossible += subj*100;
-
-        resultText += `${subj}: ${data.grade}<br>`;
-      });
-
-      const gp = (totalValue / subjects.length).toFixed(2);
-
-      document.getElementById("result").innerHTML =
-        resultText + `<br><span class="text-green-600 font-bold">Gred Purata: ${gp}</span>`;
-        result += `<h3 class="mt-4 font-bold">Jumlah Markah: ${totalMarks} / ${totalPossible}</h3>`;
-      document.getElementById("downloadBtn").classList.remove("hidden");
+          <!-- MARK INPUT -->
+          <input type="number" data-mark 
+            placeholder="Markah (0 - 100)"
+            class="w-full mt-3 p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-400">
+        </div>
+      `;
     }
 
-    function downloadPDF() {
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF();
+    document.getElementById("calcBtn").classList.remove("hidden");
+  }
 
-      pdf.text("SPM GP Calculator Result", 10, 10);
+  /* ---------------------------------------------------
+     CALCULATE GP + CHECK DUPLICATES
+  --------------------------------------------------- */
+  function calculateGP() {
+    const errorBox = document.getElementById("errorBox");
+    const subjects = [...document.querySelectorAll("[data-subject]")].map(s => s.value);
 
-      let y = 20;
-      document.getElementById("result").innerHTML
-        .replace(/<br>/g, "\n")
-        .split("\n")
-        .forEach(line => {
-          pdf.text(line, 10, y);
-          y += 8;
-        });
-
-      pdf.save("gp_result.pdf");
+    // CHECK DUPLICATES
+    const dup = subjects.filter((v, i, a) => a.indexOf(v) !== i);
+    if (dup.length > 0) {
+      errorBox.textContent = "Ralat: Subjek tidak boleh diulang (" + dup[0] + ")";
+      errorBox.classList.remove("hidden");
+      return;
     }
-  </script>
+    errorBox.classList.add("hidden");
+
+    const markInputs = document.querySelectorAll("[data-mark]");
+
+    let totalMarks = 0;
+    let totalSubjects = markInputs.length;
+    let totalPoints = 0;
+
+    let outputHTML = "<div class='space-y-2'>";
+
+    // PROCESS EACH SUBJECT
+    for (let i = 0; i < totalSubjects; i++) {
+      const subject = subjects[i];
+      const mark = parseInt(markInputs[i].value) || 0;
+
+      const grade = getGrade(mark);
+      const points = getPoints(mark);
+
+      totalMarks += mark;
+      totalPoints += points;
+
+      outputHTML += `
+        <div class="p-3 bg-white border rounded-lg">
+          <b>${subject}</b><br>
+          Markah: ${mark} &nbsp; | &nbsp; Gred: <span class="text-indigo-600 font-bold">${grade}</span>
+        </div>
+      `;
+    }
+
+    outputHTML += "</div><hr class='my-4'>";
+
+    const maxMarks = totalSubjects * 100;
+    const gp = (totalPoints / totalSubjects).toFixed(2);
+
+    outputHTML += `
+      <div class='text-lg font-semibold'>
+        Jumlah Markah: ${totalMarks} / ${maxMarks}<br>
+        Gred Purata (GP): <span class="text-green-600 font-bold">${gp}</span>
+      </div>
+    `;
+
+    document.getElementById("result").innerHTML = outputHTML;
+  }
+</script>
 
 </body>
 </html>
-
