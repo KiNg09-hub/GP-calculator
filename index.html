@@ -1,244 +1,543 @@
 <!DOCTYPE html>
-<html lang="ms" class="dark:bg-gray-900 dark:text-white">
+<html lang="ms">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>SPM GP Calculator</title>
 
-  <!-- TailwindCSS -->
+  <!-- Tailwind CDN for quick styling -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- jsPDF -->
+  <!-- jsPDF (UMD) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <style>
-    /* Fix input visibility in dark mode */
-    input, select {
-      background-color: var(--tw-bg-opacity, 1) !important;
-      color: inherit !important;
+    /* Small helper for jsPDF fonts fallback */
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #0b1220; --card: #0f1724; --muted: #9ca3af; }
+    }
+    @media (prefers-color-scheme: light) {
+      :root { --bg: #f8fafc; --card: #ffffff; --muted: #6b7280; }
     }
   </style>
 </head>
 
-<body class="bg-gray-100 dark:bg-gray-900 dark:text-white min-h-screen flex justify-center p-6">
+<body class="min-h-screen bg-gradient-to-br from-sky-50 to-indigo-50 dark:from-slate-900 dark:to-slate-800
+             text-slate-800 dark:text-slate-100 p-6">
 
-  <div class="bg-white dark:bg-gray-800 shadow-xl w-full max-w-3xl p-6 rounded-2xl">
+  <!-- Main container -->
+  <main class="max-w-4xl mx-auto">
 
-    <!-- TITLE -->
-    <h1 class="text-3xl font-bold text-indigo-600 dark:text-indigo-300">
-      SPM GP Calculator
-    </h1>
+    <!-- Card -->
+    <section class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 p-6">
+      <header class="flex items-start justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-indigo-700 dark:text-indigo-300">Kalkulator GP SPM</h1>
+          <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Masukkan subjek & markah. Sistem akan kira gred & GP. Nilai (numerical 'nilai') disembunyikan dari paparan.
+          </p>
+        </div>
 
-    <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
-      Masukkan bilangan subjek, pilih subjek & markah untuk kira Gred Purata.
-    </p>
+        <!-- Edit button appears after set to allow returning to change number -->
+        <div class="space-y-2 text-right">
+          <button id="editBtn" class="hidden px-3 py-2 rounded-md bg-white/5 border border-slate-200 dark:border-slate-700 text-sm"
+                  onclick="editSubjects()">✏️ Edit</button>
 
-    <!-- INPUT JUMLAH SUBJEK -->
-    <div id="setupArea" class="mb-4">
-      <label class="font-semibold">Jumlah Subjek:</label>
-      <div class="flex gap-3 mt-2">
-        <input id="totalSubjects" type="number" min="1"
-          class="flex-1 p-3 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700"
-          placeholder="Contoh: 9">
-        <button onclick="generateSubjects()"
-          class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">
-          Set
+          <div class="text-xs text-slate-400 dark:text-slate-500">Tema: ikut sistem / peranti</div>
+        </div>
+      </header>
+
+      <hr class="my-4 border-slate-100 dark:border-slate-800" />
+
+      <!-- TOP CONTROLS: number & set button (hidden after set) -->
+      <div id="topControls" class="grid sm:grid-cols-3 gap-3 items-end">
+        <div class="sm:col-span-2">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Jumlah Subjek SPM Diambil</label>
+          <input id="totalSubjects" type="number" min="1" value="9"
+                 class="mt-2 w-full p-3 rounded-lg border border-slate-300 dark:border-slate-700
+                        bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                 />
+        </div>
+
+        <div>
+          <button id="setBtn" onclick="generateSubjects()"
+                  class="w-full p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow">
+            Set
+          </button>
+        </div>
+      </div>
+
+      <!-- Main form area: subject dropdowns and marks -->
+      <div id="subjectsContainer" class="mt-6 space-y-4"></div>
+
+      <!-- Buttons: calculate & download -->
+      <div class="flex gap-3 mt-6">
+        <button id="calcBtn" onclick="calculateGP()" class="flex-1 hidden bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-lg font-semibold">
+          Kira GP
+        </button>
+
+        <button id="downloadBtn" onclick="downloadPDF()" class="flex-1 hidden bg-sky-500 hover:bg-sky-600 text-white py-3 rounded-lg font-semibold">
+          Muat Turun PDF
+        </button>
+
+        <button id="clearBtn" onclick="clearAll()" class="px-4 py-3 bg-white border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 hidden">
+          Bersihkan
         </button>
       </div>
-    </div>
 
-    <!-- SUBJECT INPUTS -->
-    <div id="subjectsContainer" class="space-y-4"></div>
+      <!-- Result panel -->
+      <div id="resultPanel" class="mt-6 p-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 hidden">
+        <!-- GP shown first -->
+        <div id="gpOutput" class="text-lg font-bold text-indigo-700 dark:text-indigo-300">GP: -</div>
+        <div id="marksSummary" class="text-sm text-slate-600 dark:text-slate-400 mt-1">Jumlah markah: -</div>
 
-    <!-- BUTTONS -->
-    <div class="flex gap-4 mt-6">
-      <button id="calcBtn" onclick="calculateGP()"
-        class="hidden flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg">
-        Kira GP
-      </button>
-
-      <button id="pdfBtn" onclick="generatePDF()"
-        class="hidden flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg">
-        Muat Turun PDF
-      </button>
-    </div>
-
-    <!-- RESULT -->
-    <h2 class="text-xl font-bold mt-8">Keputusan:</h2>
-    <div id="result" class="bg-gray-100 dark:bg-gray-700 p-4 mt-2 rounded-lg border border-gray-300 dark:border-gray-600">
-      -
-    </div>
-
-  </div>
-
-<script>
-/* ==========================================================
-   GRED MAPPING — YOUR EXACT SYSTEM
-   ========================================================== */
-function getGradeData(mark) {
-  if (mark >= 90) return { grade: "A+", value: 0 };
-  if (mark >= 80) return { grade: "A",  value: 1 };
-  if (mark >= 70) return { grade: "A-", value: 2 };
-  if (mark >= 66) return { grade: "B+", value: 3 };
-  if (mark >= 60) return { grade: "B",  value: 4 };
-  if (mark >= 55) return { grade: "C+", value: 5 };
-  if (mark >= 50) return { grade: "C",  value: 6 };
-  if (mark >= 46) return { grade: "D",  value: 7 };
-  if (mark >= 40) return { grade: "E",  value: 8 };
-  if (mark >= 0)  return { grade: "F",  value: 9 };
-}
-
-/* ==========================================================
-   SUBJECT LIST — YOUR ORIGINAL ONE
-   ========================================================== */
-const subjectList = [
-  "Bahasa Melayu", "Bahasa Inggeris", "Matematik", "Sains", "Sejarah",
-  "Matematik Tambahan", "Fizik", "Kimia", "Biologi", "Pendidikan Islam",
-  "Pendidikan Moral", "Ekonomi", "Perakaunan", "Perniagaan",
-  "Reka Bentuk & Teknologi (RBT)", "Sains Komputer", "Prinsip Perakaunan",
-  "Geografi", "Kesusasteraan Melayu", "Kesusasteraan Tamil", "Seni Visual",
-  "Pendidikan Jasmani & Kesihatan", "Bahasa Tamil", "Bahasa Cina",
-  "Bahasa Arab", "Pendidikan Al-Quran dan Al-Sunnah",
-  "Pendidikan Syariah Islamiah"
-];
-
-/* ==========================================================
-   GENERATE SUBJECT INPUTS
-   ========================================================== */
-function generateSubjects() {
-  const total = parseInt(document.getElementById("totalSubjects").value);
-  const container = document.getElementById("subjectsContainer");
-  const setupArea = document.getElementById("setupArea");
-
-  if (!total || total < 1) return alert("Masukkan jumlah subjek yang sah!");
-
-  container.innerHTML = "";
-
-  // Hide setup UI after generating
-  setupArea.classList.add("hidden");
-
-  for (let i = 1; i <= total; i++) {
-    container.innerHTML += `
-      <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 p-4 rounded-xl">
-
-        <label class="font-medium">Subjek ${i}</label>
-
-        <select class="w-full mt-2 p-3 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700"
-          data-subject>
-          <option value="">-- Pilih Subjek --</option>
-          ${subjectList.map(s => `<option value="${s}">${s}</option>`).join("")}
-        </select>
-
-        <input type="number" placeholder="Markah (0 - 100)"
-          class="w-full mt-3 p-3 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700"
-          data-mark>
+        <div id="breakdown" class="mt-4 space-y-2"></div>
       </div>
-    `;
-  }
 
-  document.getElementById("calcBtn").classList.remove("hidden");
-}
+      <!-- Error banner area -->
+      <div id="errorBanner" class="mt-4 hidden p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 text-red-800 dark:text-red-200">
+        <span id="errorText"></span>
+      </div>
 
-/* ==========================================================
-   CALCULATE GP + DETECT DUPLICATES
-   ========================================================== */
-function calculateGP() {
-  const subjects = document.querySelectorAll("[data-subject]");
-  const marks = document.querySelectorAll("[data-mark]");
-  const resultDiv = document.getElementById("result");
+    </section>
+  </main>
 
-  let totalValue = 0;
-  let totalMarks = 0;
-  let duplicateCheck = new Set();
-  let outputHTML = "";
+  <!-- ============================
+       JavaScript — main logic
+       ============================ -->
+  <script>
+    /* ============================
+       SUBJECT LIST (original list)
+       - Edit here to change available subjects
+       - Keep commas / strings exactly
+       ============================ */
+    const spmSubjects = [
+      "Bahasa Melayu",
+      "Bahasa Inggeris",
+      "Matematik",
+      "Sains",
+      "Sejarah",
+      "Matematik Tambahan",
+      "Fizik",
+      "Kimia",
+      "Biologi",
+      "Pendidikan Islam",
+      "Pendidikan Moral",
+      "Ekonomi",
+      "Perakaunan",
+      "Perniagaan",
+      "Reka Bentuk & Teknologi (RBT)",
+      "Sains Komputer",
+      "Prinsip Perakaunan",
+      "Geografi",
+      "Kesusasteraan Melayu",
+      "Kesusasteraan Tamil",
+      "Seni Visual",
+      "Pendidikan Jasmani & Kesihatan",
+      "Bahasa Tamil",
+      "Bahasa Cina",
+      "Bahasa Arab",
+      "Pendidikan Al-Quran dan Al-Sunnah",
+      "Pendidikan Syariah Islamiah"
+    ];
 
-  // Duplicate prevention
-  for (let s of subjects) {
-    if (duplicateCheck.has(s.value))
-      return alert("❌ Subjek tidak boleh berulang!");
-    duplicateCheck.add(s.value);
-  }
+    /* ============================
+       GRADE MAPPING: keep EXACTLY as user requested
+       Each entry contains: mark threshold -> grade letter + numeric value (nilai)
+       IMPORTANT: value is used internally for GP computation but NOT shown on site
+       ============================ */
+    function getGradeData(mark) {
+      // Keep the mapping exactly as you set (A+ = 0 ... F = 9)
+      if (mark >= 90) return { grade: "A+", value: 0 };
+      if (mark >= 80) return { grade: "A",  value: 1 };
+      if (mark >= 70) return { grade: "A-", value: 2 };
+      if (mark >= 66) return { grade: "B+", value: 3 };
+      if (mark >= 60) return { grade: "B",  value: 4 };
+      if (mark >= 55) return { grade: "C+", value: 5 };
+      if (mark >= 50) return { grade: "C",  value: 6 };
+      if (mark >= 46) return { grade: "D",  value: 7 };
+      if (mark >= 40) return { grade: "E",  value: 8 };
+      if (mark >= 0)  return { grade: "F",  value: 9 };
+      return { grade: "-", value: 9 };
+    }
 
-  subjects.forEach((subj, index) => {
-    const mark = parseInt(marks[index].value) || 0;
-    const { grade, value } = getGradeData(mark);
+    /* ======== DOM references ======== */
+    const subjectsContainer = document.getElementById('subjectsContainer');
+    const calcBtn = document.getElementById('calcBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const resultPanel = document.getElementById('resultPanel');
+    const gpOutput = document.getElementById('gpOutput');
+    const marksSummary = document.getElementById('marksSummary');
+    const breakdown = document.getElementById('breakdown');
+    const topControls = document.getElementById('topControls');
+    const setBtn = document.getElementById('setBtn');
+    const editBtn = document.getElementById('editBtn');
+    const errorBanner = document.getElementById('errorBanner');
+    const errorText = document.getElementById('errorText');
 
-    totalValue += value;
-    totalMarks += mark;
+    /* ============================
+       generateSubjects()
+       - Creates subject dropdown + mark input for N subjects
+       - After pressing Set, hide the top controls (as requested)
+       - Show Edit button to re-open controls
+       ============================ */
+    function generateSubjects() {
+      const total = parseInt(document.getElementById('totalSubjects').value);
+      if (!total || total < 1) {
+        showError("Sila masukkan jumlah subjek yang sah (≥1).");
+        return;
+      }
 
-    outputHTML += `
-      <tr class="border dark:border-gray-500">
-        <td class="p-2">${subj.value}</td>
-        <td class="p-2 text-center">${mark}</td>
-        <td class="p-2 text-center">${grade}</td>
-      </tr>
-    `;
-  });
+      // clear previous
+      subjectsContainer.innerHTML = '';
+      hideError();
 
-  const totalSubjects = subjects.length;
-  const GP = (totalValue / totalSubjects).toFixed(2);
+      // create N subject rows
+      for (let i = 1; i <= total; i++) {
+        const row = document.createElement('div');
+        row.className = 'bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row gap-3 items-center';
 
-  resultDiv.innerHTML = `
-    <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-300 mb-3">
-      GP: ${GP}
-    </p>
+        // subject select (dropdown)
+        const select = document.createElement('select');
+        select.className = 'flex-1 p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none';
+        // add default placeholder option
+        select.innerHTML = '<option value=\"\">-- Pilih Subjek --</option>' + spmSubjects.map(s => `<option value="${s}">${s}</option>`).join('');
+        select.setAttribute('data-subject', '');
+        // check duplicates on change
+        select.addEventListener('change', () => {
+          if (hasDuplicateSubjects()) {
+            // visually mark duplicate selects
+            markDuplicateSelects();
+            showError('Subjek yang sama dipilih lebih daripada sekali. Sila pilih subjek berlainan.');
+          } else {
+            clearDuplicateMarks();
+            hideError();
+          }
+        });
 
-    <p class="font-semibold mb-2">
-     Jumlah Markah: ${totalMarks} / ${totalSubjects * 100}
-    </p>
+        // mark input
+        const markInput = document.createElement('input');
+        markInput.type = 'number';
+        markInput.min = 0;
+        markInput.max = 100;
+        markInput.placeholder = 'Markah (0-100)';
+        markInput.className = 'w-44 p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none';
+        markInput.setAttribute('data-mark', '');
 
-    <table class="w-full mt-2 border dark:border-gray-500">
-      <tr class="bg-indigo-600 text-white dark:bg-indigo-500">
-        <th class="p-2">Subjek</th>
-        <th class="p-2">Markah</th>
-        <th class="p-2">Gred</th>
-      </tr>
-      ${outputHTML}
-    </table>
-  `;
+        // label small showing subject index (for accessibility)
+        const label = document.createElement('div');
+        label.className = 'w-full sm:w-auto text-sm text-slate-500 dark:text-slate-400';
+        label.innerText = `Subjek ${i}`;
 
-  document.getElementById("pdfBtn").classList.remove("hidden");
-}
+        // compose row: label left (on small screens stacked)
+        const left = document.createElement('div');
+        left.className = 'flex-1';
+        left.appendChild(label);
+        left.appendChild(select);
 
-/* ==========================================================
-   PDF GENERATION — WITH TABLE STYLE
-   ========================================================== */
-function generatePDF() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF("p", "pt", "a4");
+        row.appendChild(left);
+        row.appendChild(markInput);
 
-  doc.setFontSize(20);
-  doc.text("Keputusan GP SPM", 40, 40);
+        subjectsContainer.appendChild(row);
+      }
 
-  // Table start
-  let y = 100;
-  doc.setFontSize(12);
+      // hide top controls (set & input) and show edit button
+      topControls.style.display = 'none';
+      editBtn.classList.remove('hidden');
 
-  doc.text("Subjek", 40, y);
-  doc.text("Markah", 250, y);
-  doc.text("Gred", 350, y);
+      // show action buttons
+      calcBtn.classList.remove('hidden');
+      clearBtn.classList.remove('hidden');
 
-  doc.line(40, y + 5, 500, y + 5);
+      // hide previous results
+      resultPanel.classList.add('hidden');
+      downloadBtn.classList.add('hidden');
+    }
 
-  const subjects = document.querySelectorAll("[data-subject]");
-  const marks = document.querySelectorAll("[data-mark]");
+    /* ============================
+       editSubjects()
+       - Shows the top controls again to allow changing the number
+       - Keeps existing rows cleared
+       ============================ */
+    function editSubjects() {
+      topControls.style.display = 'grid';
+      editBtn.classList.add('hidden');
+      subjectsContainer.innerHTML = '';
+      calcBtn.classList.add('hidden');
+      clearBtn.classList.add('hidden');
+      resultPanel.classList.add('hidden');
+      downloadBtn.classList.add('hidden');
+      hideError();
+    }
 
-  y += 25;
+    /* ============================
+       Validation: duplicate subject detection
+       - Returns true if duplicate found
+       - markDuplicateSelects() colors duplicate selects
+       ============================ */
+    function getSelectedSubjects() {
+      const selects = Array.from(document.querySelectorAll('[data-subject]'));
+      return selects.map(s => s.value.trim()).filter(v => v !== '');
+    }
 
-  subjects.forEach((subj, index) => {
-    const mark = parseInt(marks[index].value) || 0;
-    const { grade } = getGradeData(mark);
+    function hasDuplicateSubjects() {
+      const items = getSelectedSubjects();
+      const set = new Set();
+      for (const it of items) {
+        if (set.has(it)) return true;
+        set.add(it);
+      }
+      return false;
+    }
 
-    doc.text(subj.value, 40, y);
-    doc.text(String(mark), 260, y);
-    doc.text(grade, 360, y);
+    function markDuplicateSelects() {
+      const selects = Array.from(document.querySelectorAll('[data-subject]'));
+      const seen = {};
+      // mark duplicates with a red border
+      selects.forEach(s => {
+        const val = s.value.trim();
+        if (!val) {
+          s.classList.remove('ring-2', 'ring-red-400', 'border-red-400');
+          return;
+        }
+        if (seen[val]) {
+          // mark both this and the first as duplicate
+          s.classList.add('ring-2', 'ring-red-400', 'border-red-400');
+          seen[val].classList.add('ring-2', 'ring-red-400', 'border-red-400');
+        } else {
+          seen[val] = s;
+          s.classList.remove('ring-2', 'ring-red-400', 'border-red-400');
+        }
+      });
+    }
 
-    y += 25;
-  });
+    function clearDuplicateMarks() {
+      const selects = Array.from(document.querySelectorAll('[data-subject]'));
+      selects.forEach(s => {
+        s.classList.remove('ring-2', 'ring-red-400', 'border-red-400');
+      });
+    }
 
-  doc.save("Keputusan_SPM_GP.pdf");
-}
-</script>
+    /* ============================
+       Error display helpers
+       ============================ */
+    function showError(msg) {
+      errorText.innerText = msg;
+      errorBanner.classList.remove('hidden');
+    }
+    function hideError() {
+      errorBanner.classList.add('hidden');
+      errorText.innerText = '';
+    }
 
+    /* ============================
+       calculateGP()
+       - Validates duplicates & empty fields
+       - Uses getGradeData(mark) exact mapping
+       - GP = (sum of nilai values) / (number of subjects)
+       - Displays: GP first, then Total Marks (obtained / max)
+       - DOES NOT show numeric nilai in the web output (only grade letters)
+       ============================ */
+    function calculateGP() {
+      hideError();
+      clearDuplicateMarks();
+
+      const selects = Array.from(document.querySelectorAll('[data-subject]'));
+      const marks = Array.from(document.querySelectorAll('[data-mark]'));
+
+      // basic checks
+      if (selects.length === 0) {
+        showError('Sila set jumlah subjek dahulu.');
+        return;
+      }
+
+      // collect data and validate each row
+      const rows = [];
+      for (let i = 0; i < selects.length; i++) {
+        const subj = selects[i].value.trim();
+        const markVal = marks[i].value === '' ? null : Number(marks[i].value);
+
+        if (!subj) {
+          showError(`Sila pilih subjek pada baris ${i + 1}.`);
+          return;
+        }
+        if (markVal === null || isNaN(markVal) || markVal < 0 || markVal > 100) {
+          showError(`Sila masukkan markah sah (0–100) untuk "${subj}".`);
+          return;
+        }
+        rows.push({ subj, mark: markVal });
+      }
+
+      // duplicate check
+      if (hasDuplicateSubjects()) {
+        markDuplicateSelects();
+        showError('Subjek duplikat dikesan. Sila pastikan setiap subjek dipilih sekali sahaja.');
+        return;
+      }
+
+      // compute total nilai (sum of nilai values) and total marks
+      let totalNilai = 0;   // sum of numeric nilai values (0..9)
+      let totalMarks = 0;   // sum of marks (0..100)
+      const breakdownHTML = [];
+
+      for (const r of rows) {
+        const gradeData = getGradeData(r.mark);    // contains .grade and .value
+        totalNilai += gradeData.value;
+        totalMarks += r.mark;
+
+        // On-site we DO NOT display the numeric nilai; only show grade letter and mark
+        breakdownHTML.push(`
+          <div class="flex justify-between items-center bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-100 dark:border-slate-700">
+            <div>
+              <div class="font-medium text-slate-700 dark:text-slate-100">${escapeHtml(r.subj)}</div>
+              <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Markah: ${r.mark}</div>
+            </div>
+            <div class="text-indigo-700 dark:text-indigo-300 font-semibold">${gradeData.grade}</div>
+          </div>
+        `);
+      }
+
+      // GP calculation: (sum nilai) / number of subjects
+      const n = rows.length;
+      const gp = (totalNilai / n);
+      const gpDisplay = (isFinite(gp) ? gp.toFixed(2) : '-');
+
+      // total marks display: obtained / maximum
+      const maxMarks = n * 100;
+      const marksDisplay = `${totalMarks} / ${maxMarks}`;
+
+      // update UI
+      gpOutput.innerText = `GP: ${gpDisplay}`;
+      marksSummary.innerText = `Jumlah markah: ${marksDisplay}`;
+
+      breakdown.innerHTML = breakdownHTML.join('');
+      resultPanel.classList.remove('hidden');
+      downloadBtn.classList.remove('hidden');
+
+      // show gp first as requested
+      resultPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    /* Utility to escape HTML (safety) */
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, function(m) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m];
+      });
+    }
+
+    /* ============================
+       clearAll() - reset everything (friendly)
+       ============================ */
+    function clearAll() {
+      subjectsContainer.innerHTML = '';
+      resultPanel.classList.add('hidden');
+      downloadBtn.classList.add('hidden');
+      calcBtn.classList.add('hidden');
+      clearBtn.classList.add('hidden');
+      editBtn.classList.add('hidden');
+      topControls.style.display = 'grid';
+      hideError();
+    }
+
+    /* ============================
+       PDF Export (styled table)
+       - Adds heading, styled colored header row, table with rows
+       - Includes GP and Total Marks at top
+       - Uses simple jsPDF API (no external autotable)
+       ============================ */
+    async function downloadPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+
+      // Header area
+      doc.setFontSize(18);
+      doc.setTextColor(40, 40, 60);
+      doc.text('Keputusan GP SPM', 40, 50);
+
+      // Capture GP and marks
+      const gpText = gpOutput.innerText || 'GP: -';
+      const marksText = marksSummary.innerText || 'Jumlah markah: -';
+
+      doc.setFontSize(12);
+      doc.text(gpText, 40, 75);
+      doc.text(marksText, 40, 92);
+
+      // Draw table header with fill color
+      const startY = 120;
+      const leftX = 40;
+      const colWidths = [260, 120, 120]; // Subject | Mark | Grade
+
+      // Header background
+      doc.setFillColor(37, 99, 235); // blue-ish
+      doc.rect(leftX, startY - 14, colWidths[0] + colWidths[1] + colWidths[2], 20, 'F');
+
+      // Header text (white)
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.text('Subjek', leftX + 6, startY);
+      doc.text('Markah', leftX + colWidths[0] + 6, startY);
+      doc.text('Gred', leftX + colWidths[0] + colWidths[1] + 6, startY);
+
+      // Table rows
+      let y = startY + 12;
+      const selects = Array.from(document.querySelectorAll('[data-subject]'));
+      const marks = Array.from(document.querySelectorAll('[data-mark]'));
+      doc.setFontSize(10);
+      doc.setTextColor(30, 30, 40);
+
+      for (let i = 0; i < selects.length; i++) {
+        const subj = selects[i].value.trim();
+        const mk = marks[i].value === '' ? '-' : marks[i].value;
+        const grade = subj ? getGradeData(Number(mk)).grade : '-';
+
+        // if new page needed
+        if (y > 740) {
+          doc.addPage();
+          y = 40;
+        }
+
+        // row background alternate
+        if (i % 2 === 1) {
+          doc.setFillColor(245, 247, 250);
+          doc.rect(leftX, y - 8, colWidths[0] + colWidths[1] + colWidths[2], 18, 'F');
+        }
+
+        // text
+        doc.setTextColor(20,20,30);
+        doc.text(subj || '-', leftX + 6, y);
+        doc.text(String(mk), leftX + colWidths[0] + 6, y);
+        doc.text(grade, leftX + colWidths[0] + colWidths[1] + 6, y);
+
+        y += 18;
+      }
+
+      // Footer / summary box with color
+      const footerY = (y + 30);
+      doc.setFillColor(14, 165, 233); // sky blue
+      doc.roundedRect(leftX, footerY, 300, 50, 6, 6, 'F');
+      doc.setTextColor(255,255,255);
+      doc.setFontSize(12);
+      doc.text(gpText, leftX + 10, footerY + 18);
+      doc.text(marksText, leftX + 10, footerY + 36);
+
+      // Save file
+      doc.save('SPM_GP_Result.pdf');
+    }
+
+    /* ============================
+       Auto-initialize (optional)
+       Generate initial 9 subjects on load (like your original)
+       You can remove this if you prefer empty screen on load
+       ============================ */
+    window.addEventListener('load', () => {
+      // Auto-generate default 9 rows so user can start immediately
+      // (This matches your previous behaviour)
+      // NOTE: This does not 'press Set' - it just pre-fills the screen with 9 rows
+      // If you want top controls hidden immediately, call generateSubjects() instead.
+      // Here we'll keep top controls visible so user can Set themselves.
+      // generateSubjects();
+    });
+  </script>
 </body>
 </html>
